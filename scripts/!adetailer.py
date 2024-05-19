@@ -297,22 +297,67 @@ class AfterDetailerScript(scripts.Script):
                 prompts[n] = prompts[n].replace(pair.s, pair.r)
         return prompts
 
-    def get_prompt(self, p, args: ADetailerArgs) -> tuple[list[str], list[str]]:
+    def get_prompt(self, p, args: ADetailerArgs, n) -> tuple[list[str], list[str]]:
         i = get_i(p)
         prompt_sr = p._ad_xyz_prompt_sr if hasattr(p, "_ad_xyz_prompt_sr") else []
 
+        allp=p.all_hr_prompts
+        allp_nega=p.all_hr_negative_prompts
+        normalp=p.hr_prompt
+        normalp_nega=p.hr_negative_prompt
+        if not allp:
+            allp = p.all_prompts
+        if not allp_nega:
+            allp_nega = p.all_negative_prompts
+        if not normalp:
+            normalp = p.prompt
+        if not normalp_nega:
+            normalp_nega = p.negative_prompt
+        st=n+1
+        strst=str(st)
+        allp = [re.sub(":[0-9]+\]", ":0]", s) for s in allp]
+        allp_nega  = [re.sub(":[0-9]+\]", ":0]", s) for s in allp_nega]
+        normalp = re.sub(":[0-9]+\]", ":0]", normalp)
+        normalp_nega = re.sub(":[0-9]+\]", ":0]", normalp_nega)
+        allp = [re.sub(":[0-1]\.[0-9]*?\]", ":0]", s) for s in allp]
+        allp_nega  = [re.sub(":[0-1]\.[0-9]*?\]", ":0]", s) for s in allp_nega]
+        normalp = re.sub(":[0-1]\.[0-9]*?\]", ":0]", normalp)
+        normalp_nega = re.sub(":[0-1]\.[0-9]*?\]", ":0]", normalp_nega)
+        allp = [re.sub(":2(\.[0-9]*?\])", ":0\\1", s) for s in allp]
+        allp_nega  = [re.sub(":2(\.[0-9]*?\])", ":0\\1", s) for s in allp_nega]
+        normalp = re.sub(":2(\.[0-9]*?\])", ":0\\1", normalp)
+        normalp_nega = re.sub(":2(\.[0-9]*?\])", ":0\\1", normalp_nega)
+        allp = [re.sub("<noad"+"{}?".format(strst)+":.*?>[\s\S]*", "", s) for s in allp]
+        allp_nega  = [re.sub("<noad"+"{}?".format(strst)+":.*?>[\s\S]*", "", s) for s in allp_nega]
+        normalp = re.sub("<noad"+"{}?".format(strst)+":.*?>[\s\S]*", "", normalp)
+        normalp_nega = re.sub("<noad"+"{}?".format(strst)+":.*?>[\s\S]*", "", normalp_nega)
+        allp = [re.sub("<noad"+"{}?".format(strst)+"a:.*?>[\s\S]*?<noad"+"{}?".format(strst)+"b:.*?>", "", s) for s in allp]
+        allp_nega  = [re.sub("<noad"+"{}?".format(strst)+"a:.*?>[\s\S]*?<noad"+"{}?".format(strst)+"b:.*?>", "", s) for s in allp_nega]
+        normalp = re.sub("<noad"+"{}?".format(strst)+"a:.*?>[\s\S]*?<noad"+"{}?".format(strst)+"b:.*?>", "", normalp)
+        normalp_nega = re.sub("<noad"+"{}?".format(strst)+"a:.*?>[\s\S]*?<noad"+"{}?".format(strst)+"b:.*?>", "", normalp_nega)
+        allp = [re.sub("<pad"+"{}?".format(strst)+":(.*?)>", "\\1", s) for s in allp]
+        allp_nega  = [re.sub("<pad"+"{}?".format(strst)+":(.*?)>", "\\1", s) for s in allp_nega]
+        normalp = re.sub("<pad"+"{}?".format(strst)+":(.*?)>", "\\1", normalp)
+        normalp_nega = re.sub("<pad"+"{}?".format(strst)+":(.*?)>", "\\1", normalp_nega)
+        allp = [re.sub("<lad"+"{}?".format(strst)+":", "<lora:", s) for s in allp]
+        allp_nega  = [re.sub("<lad"+"{}?".format(strst)+":", "<lora:", s) for s in allp_nega]
+        normalp = re.sub("<lad"+"{}?".format(strst)+":", "<lora:", normalp)
+        normalp_nega = re.sub("<lad"+"{}?".format(strst)+":", "<lora:", normalp_nega)
+        print("adetailer prompt")
+        print(allp)
+
         prompt = self._get_prompt(
             ad_prompt=args.ad_prompt,
-            all_prompts=p.all_prompts,
+            all_prompts=allp,
             i=i,
-            default=p.prompt,
+            default=normalp,
             replacements=prompt_sr,
         )
         negative_prompt = self._get_prompt(
             ad_prompt=args.ad_negative_prompt,
-            all_prompts=p.all_negative_prompts,
+            all_prompts=allp_nega,
             i=i,
-            default=p.negative_prompt,
+            default=normalp_nega,
             replacements=prompt_sr,
         )
 
@@ -710,7 +755,7 @@ class AfterDetailerScript(scripts.Script):
 
         i2i = self.get_i2i_p(p, args, pp.image)
         seed, subseed = self.get_seed(p)
-        ad_prompts, ad_negatives = self.get_prompt(p, args)
+        ad_prompts, ad_negatives = self.get_prompt(p, args, n)
 
         is_mediapipe = args.ad_model.lower().startswith("mediapipe")
 
